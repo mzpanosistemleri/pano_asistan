@@ -2,9 +2,76 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Elektrik Panosu Asistanı (Firebase)</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <title>Elektrik Panosu Asistanı</title>
+  <script type="module">
+    // Firebase modüllerini import ediyoruz
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // 🔧 Firebase Ayarları – BURAYI KENDİ GERÇEK BİLGİLERİNLE DOLDUR
+    const firebaseConfig = {
+      apiKey: "BURAYA_YAPIŞTIR",
+      authDomain: "BURAYA_YAPIŞTIR",
+      projectId: "BURAYA_YAPIŞTIR",
+      storageBucket: "BURAYA_YAPIŞTIR",
+      messagingSenderId: "BURAYA_YAPIŞTIR",
+      appId: "BURAYA_YAPIŞTIR"
+    };
+
+    // Firebase ve Firestore başlatma
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ➕ Yeni Proje Ekle
+    window.projeEkle = async function () {
+      const adi = document.getElementById('projeAdi').value.trim();
+      const aciklama = document.getElementById('aciklama').value.trim();
+
+      if (!adi || !aciklama) {
+        alert("Proje adı ve açıklaması boş olamaz.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "projeler"), {
+          projeAdi: adi,
+          aciklama: aciklama,
+          malzemeler: []
+        });
+        document.getElementById('projeAdi').value = '';
+        document.getElementById('aciklama').value = '';
+      } catch (error) {
+        alert("Kayıt sırasında hata oluştu: " + error.message);
+      }
+    };
+
+    // 🔁 Projeleri Listele
+    function listele(snapshot) {
+      const container = document.getElementById("projelerListesi");
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML = "<p>Henüz proje eklenmemiş.</p>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const proje = doc.data();
+        const div = document.createElement("div");
+        div.className = "proje";
+        div.innerHTML = `
+          <h3>📌 ${proje.projeAdi}</h3>
+          <p>${proje.aciklama}</p>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // 🔁 Gerçek Zamanlı Dinleme
+    const q = query(collection(db, "projeler"), orderBy("projeAdi"));
+    onSnapshot(q, listele);
+  </script>
+
   <style>
     body {
       background-color: #121212;
@@ -46,70 +113,6 @@
 
   <h2>📋 Kayıtlı Projeler</h2>
   <div id="projelerListesi">Yükleniyor...</div>
-
-  <script>
-    // 🔧 Firebase Ayarları (BURAYA KENDİ BİLGİLERİNİ YAPIŞTIR)
-    const firebaseConfig = {
-      apiKey: "BURAYA_YAPIŞTIR",
-      authDomain: "BURAYA_YAPIŞTIR",
-      projectId: "BURAYA_YAPIŞTIR",
-      storageBucket: "BURAYA_YAPIŞTIR",
-      messagingSenderId: "BURAYA_YAPIŞTIR",
-      appId: "BURAYA_YAPIŞTIR"
-    };
-
-    // 🔌 Firebase Bağlantısı
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // ➕ Yeni Proje Ekle
-    async function projeEkle() {
-      const adi = document.getElementById('projeAdi').value.trim();
-      const aciklama = document.getElementById('aciklama').value.trim();
-
-      if (!adi || !aciklama) {
-        alert("Proje adı ve açıklaması boş olamaz.");
-        return;
-      }
-
-      try {
-        await db.collection("projeler").add({
-          projeAdi: adi,
-          aciklama: aciklama,
-          malzemeler: []
-        });
-        document.getElementById('projeAdi').value = '';
-        document.getElementById('aciklama').value = '';
-      } catch (error) {
-        alert("Kayıt sırasında hata oluştu: " + error.message);
-      }
-    }
-
-    // 🔁 Projeleri Listele
-    function listele(snapshot) {
-      const container = document.getElementById("projelerListesi");
-      container.innerHTML = "";
-
-      if (snapshot.empty) {
-        container.innerHTML = "<p>Henüz proje eklenmemiş.</p>";
-        return;
-      }
-
-      snapshot.forEach(doc => {
-        const proje = doc.data();
-        const div = document.createElement("div");
-        div.className = "proje";
-        div.innerHTML = `
-          <h3>📌 ${proje.projeAdi}</h3>
-          <p>${proje.aciklama}</p>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    // 🔁 Gerçek Zamanlı Dinleme
-    db.collection("projeler").orderBy("projeAdi").onSnapshot(listele);
-  </script>
 
 </body>
 </html>
