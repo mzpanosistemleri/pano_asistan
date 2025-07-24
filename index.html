@@ -1,118 +1,134 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Elektrik Panosu Asistanı</title>
-  <script type="module">
-    // Firebase modüllerini import ediyoruz
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // 🔧 Firebase Ayarları – BURAYI KENDİ GERÇEK BİLGİLERİNLE DOLDUR
-    const firebaseConfig = {
-      apiKey: "BURAYA_YAPIŞTIR",
-      authDomain: "BURAYA_YAPIŞTIR",
-      projectId: "BURAYA_YAPIŞTIR",
-      storageBucket: "BURAYA_YAPIŞTIR",
-      messagingSenderId: "BURAYA_YAPIŞTIR",
-      appId: "BURAYA_YAPIŞTIR"
-    };
-
-    // Firebase ve Firestore başlatma
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // ➕ Yeni Proje Ekle
-    window.projeEkle = async function () {
-      const adi = document.getElementById('projeAdi').value.trim();
-      const aciklama = document.getElementById('aciklama').value.trim();
-
-      if (!adi || !aciklama) {
-        alert("Proje adı ve açıklaması boş olamaz.");
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "projeler"), {
-          projeAdi: adi,
-          aciklama: aciklama,
-          malzemeler: []
-        });
-        document.getElementById('projeAdi').value = '';
-        document.getElementById('aciklama').value = '';
-      } catch (error) {
-        alert("Kayıt sırasında hata oluştu: " + error.message);
-      }
-    };
-
-    // 🔁 Projeleri Listele
-    function listele(snapshot) {
-      const container = document.getElementById("projelerListesi");
-      container.innerHTML = "";
-
-      if (snapshot.empty) {
-        container.innerHTML = "<p>Henüz proje eklenmemiş.</p>";
-        return;
-      }
-
-      snapshot.forEach(doc => {
-        const proje = doc.data();
-        const div = document.createElement("div");
-        div.className = "proje";
-        div.innerHTML = `
-          <h3>📌 ${proje.projeAdi}</h3>
-          <p>${proje.aciklama}</p>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    // 🔁 Gerçek Zamanlı Dinleme
-    const q = query(collection(db, "projeler"), orderBy("projeAdi"));
-    onSnapshot(q, listele);
-  </script>
-
   <style>
     body {
       background-color: #121212;
-      color: #eee;
+      color: #ffffff;
       font-family: Arial, sans-serif;
       max-width: 800px;
-      margin: auto;
-      padding: 20px;
+      margin: 20px auto;
     }
-    input, textarea, button {
+    h1 {
+      text-align: center;
+      color: #00e5ff;
+    }
+    input, button {
+      padding: 10px;
       margin: 5px 0;
-      padding: 8px;
-      border-radius: 5px;
-      border: 1px solid #444;
-      background-color: #1e1e1e;
-      color: #eee;
       width: 100%;
+      border: none;
+      border-radius: 5px;
+    }
+    input {
+      background-color: #1e1e1e;
+      color: white;
+    }
+    button {
+      background-color: #00e5ff;
+      color: black;
+      cursor: pointer;
+      font-weight: bold;
     }
     button:hover {
-      background-color: #333;
+      background-color: #00bcd4;
     }
-    .proje {
-      border: 1px solid #444;
-      padding: 15px;
-      border-radius: 6px;
-      margin-bottom: 20px;
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
       background-color: #1e1e1e;
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+    }
+    .actions button {
+      margin: 0 5px;
+      padding: 5px;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
+  <h1>Elektrik Panosu Asistanı</h1>
+  
+  <input type="text" id="malzeme" placeholder="Malzeme adı" />
+  <input type="number" id="adet" placeholder="Adet" min="1" />
+  <button onclick="malzemeEkle()">Malzeme Ekle</button>
 
-  <h1>⚡ Elektrik Panosu Asistanı</h1>
+  <h3>Malzeme Listesi (<span id="toplamAdet">0</span> adet)</h3>
+  <ul id="liste"></ul>
 
-  <h3>➕ Yeni Proje Ekle</h3>
-  <input id="projeAdi" placeholder="Proje Adı">
-  <textarea id="aciklama" placeholder="Proje Açıklaması"></textarea>
-  <button onclick="projeEkle()">Proje Ekle</button>
+  <script>
+    let db = [];
 
-  <h2>📋 Kayıtlı Projeler</h2>
-  <div id="projelerListesi">Yükleniyor...</div>
+    function guncelleListe() {
+      const liste = document.getElementById("liste");
+      const toplamAdet = document.getElementById("toplamAdet");
+      liste.innerHTML = "";
 
+      let toplam = 0;
+
+      db.forEach((malzeme, index) => {
+        toplam += parseInt(malzeme.adet);
+
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${malzeme.ad} (${malzeme.adet})</strong>
+          <span class="actions">
+            <button onclick="duzenle(${index})">✏️</button>
+            <button onclick="sil(${index})">❌</button>
+          </span>
+        `;
+        liste.appendChild(li);
+      });
+
+      toplamAdet.textContent = toplam;
+      localStorage.setItem("db", JSON.stringify(db));
+    }
+
+    function malzemeEkle() {
+      const ad = document.getElementById("malzeme").value.trim();
+      const adet = document.getElementById("adet").value.trim();
+
+      if (!ad || !adet || adet < 1) {
+        alert("Malzeme adı ve adet zorunludur.");
+        return;
+      }
+
+      db.push({ ad, adet });
+      guncelleListe();
+
+      document.getElementById("malzeme").value = "";
+      document.getElementById("adet").value = "";
+    }
+
+    function sil(index) {
+      if (confirm("Silmek istediğine emin misin?")) {
+        db.splice(index, 1);
+        guncelleListe();
+      }
+    }
+
+    function duzenle(index) {
+      const yeniAd = prompt("Yeni malzeme adı:", db[index].ad);
+      const yeniAdet = prompt("Yeni adet:", db[index].adet);
+
+      if (yeniAd && yeniAdet && yeniAdet > 0) {
+        db[index].ad = yeniAd.trim();
+        db[index].adet = yeniAdet.trim();
+        guncelleListe();
+      }
+    }
+
+    window.onload = function () {
+      const veriler = localStorage.getItem("db");
+      if (veriler) db = JSON.parse(veriler);
+      guncelleListe();
+    }
+  </script>
 </body>
 </html>
